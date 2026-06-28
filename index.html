@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluación Final Módulo 4</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #7dd3fc;
+      margin-bottom: 0.4rem;
+      text-align: center;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .card h2 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #7dd3fc;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .card p {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    button {
+      margin-top: auto;
+      padding: 0.55rem 1rem;
+      border: none;
+      border-radius: 8px;
+      background: #0ea5e9;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #38bdf8; }
+    button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+    #status {
+      margin-top: 2rem;
+      font-size: 0.82rem;
+      color: #64748b;
+    }
+
+    #status.ready { color: #4ade80; }
+    #status.error  { color: #f87171; }
+  </style>
+</head>
+<body>
+
+  <h1>Administrador de Usuarios</h1>
+  <p class="subtitle">JSONPlaceholder · Evaluación Final Módulo 4</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>1. Listar nombres</h2>
+      <p>Muestra en consola los nombres de todos los usuarios.</p>
+      <button id="btn-nombres" disabled>Ver nombres</button>
+    </div>
+
+    <div class="card">
+      <h2>2. Info básica</h2>
+      <p>Ingresa un nombre y obtén su <strong>username</strong> y <strong>correo</strong>.</p>
+      <button id="btn-basica" disabled>Buscar usuario</button>
+    </div>
+
+    <div class="card">
+      <h2>3. Dirección</h2>
+      <p>Ingresa un nombre y obtén todos los campos de su dirección.</p>
+      <button id="btn-direccion" disabled>Ver dirección</button>
+    </div>
+
+    <div class="card">
+      <h2>4. Info avanzada</h2>
+      <p>Ingresa un nombre y obtén teléfono, sitio web y compañía.</p>
+      <button id="btn-avanzada" disabled>Ver info avanzada</button>
+    </div>
+
+    <div class="card">
+      <h2>5. Compañías</h2>
+      <p>Lista todas las compañías junto a su <em>catchphrase</em>.</p>
+      <button id="btn-companias" disabled>Ver compañías</button>
+    </div>
+
+    <div class="card">
+      <h2>6. Nombres ordenados</h2>
+      <p>Muestra todos los nombres ordenados alfabéticamente.</p>
+      <button id="btn-ordenados" disabled>Ver ordenados</button>
+    </div>
+  </div>
+
+  <p id="status">Cargando datos…</p>
+
+  <script>
+    class UserManager {
+      constructor(url) {
+        this._data = [];
+        this._load(url);
+      }
+
+      /* ── carga con XMLHttpRequest ── */
+      _load(url) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url);
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            this._data = JSON.parse(xhr.responseText);
+            this._onReady();
+          } else {
+            this._onError(xhr.status);
+          }
+        };
+        xhr.onerror = () => this._onError('Red');
+        xhr.send();
+      }
+
+      _onReady() {
+        const status = document.getElementById('status');
+        status.textContent = `✓ ${this._data.length} usuarios cargados`;
+        status.className = 'ready';
+        document.querySelectorAll('button').forEach(b => b.disabled = false);
+      }
+
+      _onError(code) {
+        const status = document.getElementById('status');
+        status.textContent = `✗ Error al cargar datos (${code})`;
+        status.className = 'error';
+      }
+
+      /* busca un usuario por nombre (case-insensitive) */
+      _find(nombre) {
+        const q = nombre.trim().toLowerCase();
+        return this._data.find(u => u.name.toLowerCase() === q) || null;
+      }
+
+      /* ── método 1: listar nombres ── */
+      listarNombres() {
+        console.group('📋 Nombres de todos los usuarios');
+        this._data.forEach((u, i) => console.log(`${i + 1}. ${u.name}`));
+        console.groupEnd();
+      }
+
+      /* ── método 2: info básica ── */
+      infoBasica() {
+        const nombre = prompt('Nombre del usuario (ej: Leanne Graham):');
+        if (!nombre) return;
+        const u = this._find(nombre);
+        if (!u) { console.warn(`No se encontró el usuario "${nombre}"`); return; }
+        console.group(`👤 Info básica — ${u.name}`);
+        console.log('Username:', u.username);
+        console.log('Email:   ', u.email);
+        console.groupEnd();
+      }
+
+      /* ── método 3: dirección ── */
+      direccion() {
+        const nombre = prompt('Nombre del usuario:');
+        if (!nombre) return;
+        const u = this._find(nombre);
+        if (!u) { console.warn(`No se encontró el usuario "${nombre}"`); return; }
+        const { street, suite, city, zipcode, geo } = u.address;
+        console.group(`🏠 Dirección — ${u.name}`);
+        console.log('Calle:  ', street);
+        console.log('Suite:  ', suite);
+        console.log('Ciudad: ', city);
+        console.log('Código postal:', zipcode);
+        console.log('Geo — lat:', geo.lat, '| lng:', geo.lng);
+        console.groupEnd();
+      }
+
+      /* ── método 4: info avanzada ── */
+      infoAvanzada() {
+        const nombre = prompt('Nombre del usuario:');
+        if (!nombre) return;
+        const u = this._find(nombre);
+        if (!u) { console.warn(`No se encontró el usuario "${nombre}"`); return; }
+        const { name: compName, catchPhrase, bs } = u.company;
+        console.group(`🔍 Info avanzada — ${u.name}`);
+        console.log('Teléfono:  ', u.phone);
+        console.log('Sitio web: ', u.website);
+        console.group('Compañía');
+        console.log('Nombre:      ', compName);
+        console.log('Catchphrase: ', catchPhrase);
+        console.log('BS:          ', bs);
+        console.groupEnd();
+        console.groupEnd();
+      }
+
+      /* ── método 5: compañías + catchphrase ── */
+      listarCompanias() {
+        console.group('🏢 Compañías y catchphrases');
+        this._data.forEach((u, i) => {
+          console.log(`${i + 1}. ${u.company.name} — "${u.company.catchPhrase}"`);
+        });
+        console.groupEnd();
+      }
+
+      /* ── método 6: nombres ordenados ── */
+      nombresOrdenados() {
+        const ordenados = [...this._data]
+          .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+        console.group('🔤 Nombres ordenados alfabéticamente');
+        ordenados.forEach((u, i) => console.log(`${i + 1}. ${u.name}`));
+        console.groupEnd();
+      }
+    }
+
+    /* ── instancia y botones ── */
+    const manager = new UserManager('https://jsonplaceholder.typicode.com/users');
+
+    document.getElementById('btn-nombres').addEventListener('click', () => manager.listarNombres());
+    document.getElementById('btn-basica').addEventListener('click', () => manager.infoBasica());
+    document.getElementById('btn-direccion').addEventListener('click', () => manager.direccion());
+    document.getElementById('btn-avanzada').addEventListener('click', () => manager.infoAvanzada());
+    document.getElementById('btn-companias').addEventListener('click', () => manager.listarCompanias());
+    document.getElementById('btn-ordenados').addEventListener('click', () => manager.nombresOrdenados());
+  </script>
+</body>
+</html>
